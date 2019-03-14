@@ -7,9 +7,11 @@
 package http2
 
 import (
-	"crypto/tls"
-	"net/http"
+	//"crypto/tls"
+	//"net/http"
 	"sync"
+	http "github.com/tjfoc/gmhttp"
+	tls "github.com/tjfoc/gmtls"
 )
 
 // ClientConnPool manages a pool of HTTP/2 client connections.

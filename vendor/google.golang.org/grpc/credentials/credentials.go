@@ -38,8 +38,8 @@
 package credentials // import "google.golang.org/grpc/credentials"
 
 import (
-	"crypto/tls"
-	"crypto/x509"
+	//"crypto/tls"
+	//"crypto/x509"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -47,6 +47,8 @@ import (
 	"strings"
 
 	"golang.org/x/net/context"
+	"github.com/tjfoc/gmsm/sm2"
+	"github.com/tjfoc/gmtls"
 )
 
 var (
@@ -124,7 +126,7 @@ type TransportCredentials interface {
 // TLSInfo contains the auth information for a TLS authenticated connection.
 // It implements the AuthInfo interface.
 type TLSInfo struct {
-	State tls.ConnectionState
+	State gmtls.ConnectionState
 }
 
 // AuthType returns the type of TLSInfo as a string.
@@ -135,7 +137,7 @@ func (t TLSInfo) AuthType() string {
 // tlsCreds is the credentials required for authenticating a connection using TLS.
 type tlsCreds struct {
 	// TLS configuration
-	config *tls.Config
+	config *gmtls.Config
 }
 
 func (c tlsCreds) Info() ProtocolInfo {
@@ -156,7 +158,7 @@ func (c *tlsCreds) ClientHandshake(ctx context.Context, addr string, rawConn net
 		}
 		cfg.ServerName = addr[:colonPos]
 	}
-	conn := tls.Client(rawConn, cfg)
+	conn := gmtls.Client(rawConn, cfg)
 	errChannel := make(chan error, 1)
 	go func() {
 		errChannel <- conn.Handshake()
@@ -173,7 +175,7 @@ func (c *tlsCreds) ClientHandshake(ctx context.Context, addr string, rawConn net
 }
 
 func (c *tlsCreds) ServerHandshake(rawConn net.Conn) (net.Conn, AuthInfo, error) {
-	conn := tls.Server(rawConn, c.config)
+	conn := gmtls.Server(rawConn, c.config)
 	if err := conn.Handshake(); err != nil {
 		return nil, nil, err
 	}
@@ -190,7 +192,7 @@ func (c *tlsCreds) OverrideServerName(serverNameOverride string) error {
 }
 
 // NewTLS uses c to construct a TransportCredentials based on TLS.
-func NewTLS(c *tls.Config) TransportCredentials {
+func NewTLS(c *gmtls.Config) TransportCredentials {
 	tc := &tlsCreds{cloneTLSConfig(c)}
 	tc.config.NextProtos = alpnProtoStr
 	return tc
@@ -199,8 +201,8 @@ func NewTLS(c *tls.Config) TransportCredentials {
 // NewClientTLSFromCert constructs TLS credentials from the input certificate for client.
 // serverNameOverride is for testing only. If set to a non empty string,
 // it will override the virtual host name of authority (e.g. :authority header field) in requests.
-func NewClientTLSFromCert(cp *x509.CertPool, serverNameOverride string) TransportCredentials {
-	return NewTLS(&tls.Config{ServerName: serverNameOverride, RootCAs: cp})
+func NewClientTLSFromCert(cp *sm2.CertPool, serverNameOverride string) TransportCredentials {
+	return NewTLS(&gmtls.Config{ServerName: serverNameOverride, RootCAs: cp})
 }
 
 // NewClientTLSFromFile constructs TLS credentials from the input certificate file for client.
@@ -211,24 +213,24 @@ func NewClientTLSFromFile(certFile, serverNameOverride string) (TransportCredent
 	if err != nil {
 		return nil, err
 	}
-	cp := x509.NewCertPool()
+	cp := sm2.NewCertPool()
 	if !cp.AppendCertsFromPEM(b) {
 		return nil, fmt.Errorf("credentials: failed to append certificates")
 	}
-	return NewTLS(&tls.Config{ServerName: serverNameOverride, RootCAs: cp}), nil
+	return NewTLS(&gmtls.Config{ServerName: serverNameOverride, RootCAs: cp}), nil
 }
 
 // NewServerTLSFromCert constructs TLS credentials from the input certificate for server.
-func NewServerTLSFromCert(cert *tls.Certificate) TransportCredentials {
-	return NewTLS(&tls.Config{Certificates: []tls.Certificate{*cert}})
+func NewServerTLSFromCert(cert *gmtls.Certificate) TransportCredentials {
+	return NewTLS(&gmtls.Config{Certificates: []gmtls.Certificate{*cert}})
 }
 
 // NewServerTLSFromFile constructs TLS credentials from the input certificate file and key
 // file for server.
 func NewServerTLSFromFile(certFile, keyFile string) (TransportCredentials, error) {
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	cert, err := gmtls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		return nil, err
 	}
-	return NewTLS(&tls.Config{Certificates: []tls.Certificate{cert}}), nil
+	return NewTLS(&gmtls.Config{Certificates: []gmtls.Certificate{cert}}), nil
 }

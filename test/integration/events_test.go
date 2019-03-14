@@ -33,18 +33,29 @@ func TestEvents(t *testing.T) {
 }
 
 func initializeTests(t *testing.T) BaseSetupImpl {
+	//testSetup := BaseSetupImpl{
+	//	ConfigFile:      "../fixtures/config/config_test.yaml",
+	//	ChannelID:       "mychannel",
+	//	OrgID:           "peerorg1",
+	//	ChannelConfig:   "../fixtures/channel/mychannel.tx",
+	//	ConnectEventHub: true,
+	//}
 	testSetup := BaseSetupImpl{
 		ConfigFile:      "../fixtures/config/config_test.yaml",
 		ChannelID:       "mychannel",
-		OrgID:           "peerorg1",
-		ChannelConfig:   "../fixtures/channel/mychannel.tx",
+		OrgID:           org1Name,
+		ChannelConfig:   "../fixtures/channel-artifact/channel.tx",
 		ConnectEventHub: true,
 	}
 
-	if err := testSetup.Initialize(); err != nil {
+	//if err := testSetup.Initialize(); err != nil {
+	//	t.Fatalf(err.Error())
+	//}
+
+	if err := testSetup.Initialize_noCA1(); err != nil {
 		t.Fatalf(err.Error())
 	}
-
+	
 	testSetup.ChainCodeID = GenerateRandomID()
 
 	// Install and Instantiate Events CC

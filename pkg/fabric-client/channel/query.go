@@ -182,7 +182,6 @@ func queryByChaincode(channelID string, request txn.ChaincodeInvokeRequest, clie
 	if err := validateChaincodeInvokeRequest(request); err != nil {
 		return nil, err
 	}
-
 	transactionProposalResponses, _, err := sendTransactionProposal(channelID, request, clientContext)
 	if err != nil {
 		return nil, fmt.Errorf("SendTransactionProposal return error: %v", err)

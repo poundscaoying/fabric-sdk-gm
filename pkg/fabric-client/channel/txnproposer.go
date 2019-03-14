@@ -21,6 +21,10 @@ import (
 	"github.com/hyperledger/fabric-sdk-go/api/apitxn"
 	fc "github.com/hyperledger/fabric-sdk-go/pkg/fabric-client/internal"
 	"github.com/hyperledger/fabric-sdk-go/pkg/fabric-client/internal/txnproc"
+
+
+	"github.com/hyperledger/fabric/protos/utils"
+
 )
 
 // SendTransactionProposal sends the created proposal to peer for endorsement.
@@ -37,21 +41,27 @@ func (c *Channel) SendTransactionProposal(request apitxn.ChaincodeInvokeRequest)
 // sendTransactionProposal sends the created proposal to peer for endorsement.
 // TODO: return the entire request or just the txn ID?
 func sendTransactionProposal(channelID string, request apitxn.ChaincodeInvokeRequest, clientContext ClientContext) ([]*apitxn.TransactionProposalResponse, apitxn.TransactionID, error) {
+	fmt.Println("----------func 1--------")
 	if err := validateChaincodeInvokeRequest(request); err != nil {
 		return nil, apitxn.TransactionID{}, fmt.Errorf("Required parameters are empty: %s", err)
 	}
-
+	fmt.Println("----------func 2--------")
 	request, err := chaincodeInvokeRequestAddTxnID(request, clientContext)
 	if err != nil {
 		return nil, request.TxnID, err
 	}
 
+	fmt.Println("----------func 3--------")
+	fmt.Println(request)
+	fmt.Println(clientContext.UserContext().PrivateKey())
 	proposal, err := newTransactionProposal(channelID, request, clientContext)
 	if err != nil {
 		return nil, request.TxnID, err
 	}
-
+	fmt.Println("----------func 4--------")
 	responses, err := txnproc.SendTransactionProposalToProcessors(proposal, request.Targets)
+	fmt.Println("err:",err)
+	fmt.Println("response:",responses)
 	return responses, request.TxnID, err
 }
 
@@ -137,9 +147,12 @@ func newTransactionProposal(channelID string, request apitxn.ChaincodeInvokeRequ
 		return nil, fmt.Errorf("Error getting user context: %s", err)
 	}
 
+	//signature, err := fc.SignObjectWithKey(proposalBytes, user.PrivateKey(),
+	//	&bccsp.SHAOpts{}, nil, clientContext.CryptoSuite())
 	signature, err := fc.SignObjectWithKey(proposalBytes, user.PrivateKey(),
-		&bccsp.SHAOpts{}, nil, clientContext.CryptoSuite())
+		&bccsp.GMSM3Opts{}, nil, clientContext.CryptoSuite())
 	if err != nil {
+		//fmt.Println(err)
 		return nil, err
 	}
 
@@ -151,6 +164,24 @@ func newTransactionProposal(channelID string, request apitxn.ChaincodeInvokeRequ
 		Proposal:       proposal,
 	}
 
+	fmt.Println("------------newTransactionProposal---------------")
+	fmt.Println(signedProposal.ProposalBytes)
+	prop, err := utils.GetProposal(signedProposal.ProposalBytes)
+	fmt.Println(prop)
+	if err != nil {
+		fmt.Println(err)
+	}
+	//// validate the header
+	//chdr, shdr, err := validateCommonHeader(hdr)
+	//if err != nil {
+	//	return nil, nil, nil, err
+	//}
+	//
+	//// validate the signature
+	//err = checkSignatureFromCreator(shdr.Creator, signedProp.Signature, signedProp.ProposalBytes, chdr.ChannelId)
+	//if err != nil {
+	//	return nil, nil, nil, err
+	//}
 	return &tp, nil
 }
 

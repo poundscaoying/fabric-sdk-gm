@@ -12,21 +12,19 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+Modified create GM options by Tongji Fintech Research Institute on 2017-09-15.
 */
 
 package msp
 
 import (
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
-
-	"github.com/golang/protobuf/proto"
-
-	"encoding/pem"
+	"os"
 	"path/filepath"
 
-	"os"
-
+	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/factory"
 	"github.com/hyperledger/fabric/protos/msp"
@@ -170,6 +168,9 @@ func getMspConfig(dir string, ID string, sigid *msp.SigningIdentityInfo) (*msp.M
 	configFile := filepath.Join(dir, configfilename)
 	tlscacertDir := filepath.Join(dir, tlscacerts)
 	tlsintermediatecertsDir := filepath.Join(dir, tlsintermediatecerts)
+	mspLogger.Debugf("cacert   :%s", cacertDir)
+	mspLogger.Debugf("admincert:%s", admincertDir)
+	mspLogger.Debugf("tlscert  :%s", tlscacertDir)
 
 	cacerts, err := getPemMaterialFromDir(cacertDir)
 	if err != nil || len(cacerts) == 0 {

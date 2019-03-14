@@ -18,8 +18,8 @@ package util
 
 import (
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/rsa"
+//	"crypto/ecdsa"
+//	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -41,7 +41,8 @@ import (
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/factory"
 	cspsigner "github.com/hyperledger/fabric/bccsp/signer"
-	"github.com/hyperledger/fabric/bccsp/utils"
+//	"github.com/hyperledger/fabric/bccsp/utils"
+	"github.com/tjfoc/gmsm/sm2"
 )
 
 // GetDefaultBCCSP returns the default BCCSP
@@ -266,30 +267,46 @@ func BCCSPKeyRequestGenerate(req *csr.CertificateRequest, myCSP bccsp.BCCSP) (bc
 
 // ImportBCCSPKeyFromPEM attempts to create a private BCCSP key from a pem file keyFile
 func ImportBCCSPKeyFromPEM(keyFile string, myCSP bccsp.BCCSP, temporary bool) (bccsp.Key, error) {
+	fmt.Println("-------importbccspkeyfrompem------------")
 	keyBuff, err := ioutil.ReadFile(keyFile)
+	fmt.Println("keyFile",keyFile)
+	fmt.Println("keyBuff",keyBuff)
 	if err != nil {
 		return nil, err
 	}
-	key, err := utils.PEMtoPrivateKey(keyBuff, nil)
+	//key, err := utils.PEMtoPrivateKey(keyBuff, nil)
+	key1, err := sm2.ReadPrivateKeyFromMem(keyBuff, nil)
+	key, err := sm2.MarshalSm2PrivateKey(key1,nil)
+	fmt.Println("key1:",key1)
 	if err != nil {
 		return nil, fmt.Errorf("Failed parsing private key from %s: %s", keyFile, err.Error())
 	}
-	switch key.(type) {
-	case *ecdsa.PrivateKey:
-		priv, err := utils.PrivateKeyToDER(key.(*ecdsa.PrivateKey))
-		if err != nil {
-			return nil, fmt.Errorf("Failed to convert ECDSA private key from %s: %s", keyFile, err.Error())
-		}
-		sk, err := myCSP.KeyImport(priv, &bccsp.ECDSAPrivateKeyImportOpts{Temporary: temporary})
-		if err != nil {
-			return nil, fmt.Errorf("Failed to import ECDSA private key from %s: %s", keyFile, err.Error())
-		}
-		return sk, nil
-	case *rsa.PrivateKey:
-		return nil, fmt.Errorf("Failed to import RSA key from %s; RSA private key import is not supported", keyFile)
-	default:
-		return nil, fmt.Errorf("Failed to import key from %s: invalid secret key type", keyFile)
+	sk, err := myCSP.KeyImport(key, &bccsp.GMSM2PrivateKeyImportOpts{Temporary: false})
+	fmt.Println("key:",key)
+	if err != nil {
+		return nil, err
 	}
+	fmt.Println("sk:",sk)
+	return sk,nil
+	//switch key.(type) {
+	////case *ecdsa.PrivateKey:
+	////	fmt.Println("ecdsa here")
+	////	priv, err := utils.PrivateKeyToDER(key.(*ecdsa.PrivateKey))
+	////	if err != nil {
+	////		return nil, fmt.Errorf("Failed to convert ECDSA private key from %s: %s", keyFile, err.Error())
+	////	}
+	////	sk, err := myCSP.KeyImport(priv, &bccsp.ECDSAPrivateKeyImportOpts{Temporary: temporary})
+	////	if err != nil {
+	////		return nil, fmt.Errorf("Failed to import ECDSA private key from %s: %s", keyFile, err.Error())
+	////	}
+	////	return sk, nil
+	//case *sm2.PrivateKey:
+	//	return nil, fmt.Errorf("Failed to import key from %s:gm not suport", keyFile)
+	//case *rsa.PrivateKey:
+	//	return nil, fmt.Errorf("Failed to import RSA key from %s; RSA private key import is not supported", keyFile)
+	//default:
+	//	return nil, fmt.Errorf("Failed to import key from %s: invalid secret key type", keyFile)
+	//}
 }
 
 // LoadX509KeyPair reads and parses a public/private key pair from a pair

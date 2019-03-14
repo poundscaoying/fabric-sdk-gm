@@ -25,6 +25,10 @@ import (
 	admin "github.com/hyperledger/fabric-sdk-go/pkg/fabric-txn/admin"
 	"github.com/hyperledger/fabric/common/cauthdsl"
 	pb "github.com/hyperledger/fabric/protos/peer"
+
+	client "github.com/hyperledger/fabric-sdk-go/pkg/fabric-client"
+	"github.com/hyperledger/fabric/bccsp/factory"
+
 )
 
 // BaseSetupImpl implementation of BaseTestSetup
@@ -143,6 +147,113 @@ func (setup *BaseSetupImpl) Initialize() error {
 	return nil
 }
 
+
+// Initialize reads configuration from file and sets up client, channel and event hub
+func (setup *BaseSetupImpl) Initialize_noCA1() error {
+
+
+	// Initialize configuration
+	configImpl, err := config.InitConfig(setup.ConfigFile)
+	if err != nil {
+		return fmt.Errorf("InitConfig returned error: %v", err)
+	}	
+
+	// Instantiate client
+	sc := client.NewClient(configImpl)
+
+	// Initialize crypto suite
+	err = factory.InitFactories(configImpl.CSPConfig())
+	if err != nil {
+		return fmt.Errorf("InitFactories returned error: %v", err)
+	}
+
+	cryptoSuite := factory.GetDefault()
+	sc.SetCryptoSuite(cryptoSuite)
+	println("--------cryptoSuite------------")
+	println(cryptoSuite)
+
+
+	setup.Client = sc
+
+	org1Admin, err := GetAdmin(sc, "org1", setup.OrgID)
+	fmt.Println("----getadmin here----")
+	fmt.Println(org1Admin.PrivateKey())
+	if err != nil {
+		return fmt.Errorf("Error getting org admin user: %v", err)
+	}
+
+	org1User, err := GetUser(sc, "org1", setup.OrgID)
+	if err != nil {
+		return fmt.Errorf("Error getting org user: %v", err)
+	}
+
+	setup.AdminUser = org1Admin
+	setup.NormalUser = org1User
+
+	channel, err := setup.GetChannel(setup.Client, setup.ChannelID, []string{setup.OrgID})
+	if err != nil {
+		return fmt.Errorf("Create channel (%s) failed: %v", setup.ChannelID, err)
+	}
+	setup.Channel = channel
+
+	ordererAdmin, err := GetOrdererAdmin(sc, setup.OrgID)
+	if err != nil {
+		return fmt.Errorf("Error getting orderer admin user: %v", err)
+	}
+
+	// Check if primary peer has joined channel
+	alreadyJoined, err := HasPrimaryPeerJoinedChannel(sc, org1Admin, channel)
+	if err != nil {
+		return fmt.Errorf("Error while checking if primary peer has already joined channel: %v", err)
+		}
+	//alreadyJoined:=bool(true)
+
+	if alreadyJoined{
+		fmt.Printf("========PrimaryPeer has Joined Channel!============ ")
+		fmt.Printf("\n")
+
+	}
+	if !alreadyJoined {
+		// Create, initialize and join channel
+		if err = admin.CreateOrUpdateChannel(sc, ordererAdmin, org1Admin, channel, setup.ChannelConfig); err != nil {
+			return fmt.Errorf("CreateChannel returned error: %v", err)
+		}
+		time.Sleep(time.Second * 3)
+
+		sc.SetUserContext(org1Admin)
+		if err = channel.Initialize(nil); err != nil {
+			return fmt.Errorf("Error initializing channel: %v", err)
+		}
+
+		if err = admin.JoinChannel(sc, org1Admin, channel); err != nil {
+			return fmt.Errorf("JoinChannel returned error: %v", err)
+		}
+	}
+
+	if !channel.IsInitialized() {
+		fmt.Printf("========channel is not Initialized , begin initializing channel...============ ")
+		fmt.Printf("\n")
+
+		sc.SetUserContext(org1Admin)
+		if err = channel.Initialize(nil); err != nil {
+			return fmt.Errorf("Error initializing channel: %v", err)
+		}
+
+	}//add in 20170808
+
+	//by default client's user context should use regular user, for admin actions, UserContext must be set to AdminUser
+	sc.SetUserContext(org1User)
+
+	if err := setup.setupEventHub(sc); err != nil {
+		return err
+	}
+
+	setup.Initialized = true
+
+	return nil
+}
+
+
 func (setup *BaseSetupImpl) setupEventHub(client fab.FabricClient) error {
 	eventHub, err := setup.getEventHub(client)
 	if err != nil {
@@ -210,14 +321,19 @@ func (setup *BaseSetupImpl) InstallAndInstantiateExampleCC() error {
 
 	chainCodePath := "github.com/example_cc"
 	chainCodeVersion := "v0"
+//	chainCodePath := "github.com/example_cc_fp"
+//	chainCodeVersion := "v1"
 
 	if setup.ChainCodeID == "" {
 		setup.ChainCodeID = GenerateRandomID()
 	}
 
+	fmt.Println("###############ChainCodeID:",setup.ChainCodeID)
 	if err := setup.InstallCC(setup.ChainCodeID, chainCodePath, chainCodeVersion, nil); err != nil {
 		return err
 	}
+
+	fmt.Println("****************InstallCC OK*******************")
 
 	var args []string
 	args = append(args, "init")
@@ -225,6 +341,7 @@ func (setup *BaseSetupImpl) InstallAndInstantiateExampleCC() error {
 	args = append(args, "100")
 	args = append(args, "b")
 	args = append(args, "200")
+	fmt.Println("################FUNCTION:INIT value:a:100  b:200")
 
 	return setup.InstantiateCC(setup.ChainCodeID, chainCodePath, chainCodeVersion, args)
 }
@@ -385,3 +502,44 @@ func (setup *BaseSetupImpl) getEventHub(client fab.FabricClient) (fab.EventHub, 
 
 	return eventHub, nil
 }
+
+//add zp
+func (setup *BaseSetupImpl) QueryAssetA1() (string, error) {
+	fcn := "invoke"
+	var args []string
+	//args = append(args, "invoke")
+	args = append(args, "query")
+	args = append(args, "a1")
+	return setup.Query(setup.ChannelID, setup.ChainCodeID, fcn,args)
+}
+
+func (setup *BaseSetupImpl) QueryAssetSingle(key string) (string, error) {
+	fcn := "invoke"
+	var args []string
+	//args = append(args, "invoke")
+	args = append(args, "query")
+	args = append(args, key)
+	return setup.Query(setup.ChannelID, setup.ChainCodeID, fcn,args)
+}
+
+
+
+func (setup *BaseSetupImpl) InsertFunds(key string,val string) error {
+	fcn := "invoke"
+	var args []string
+	//args = append(args, "invoke")
+	args = append(args, "insert")
+	args = append(args, key)
+	args = append(args, val)
+
+	transientDataMap := make(map[string][]byte)
+	transientDataMap["result"] = []byte("Transient data in move funds...")
+
+	_,err := fabricTxn.InvokeChaincode(setup.Client, setup.Channel, []apitxn.ProposalProcessor{setup.Channel.PrimaryPeer()}, setup.EventHub, setup.ChainCodeID, fcn,args, transientDataMap)
+	return err
+}
+
+
+
+
+//add end 

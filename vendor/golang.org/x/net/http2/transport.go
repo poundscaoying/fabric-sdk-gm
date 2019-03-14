@@ -11,7 +11,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/rand"
-	"crypto/tls"
+	//"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -19,7 +19,7 @@ import (
 	"log"
 	"math"
 	"net"
-	"net/http"
+	//"net/http"
 	"sort"
 	"strconv"
 	"strings"
@@ -29,6 +29,8 @@ import (
 	"golang.org/x/net/http2/hpack"
 	"golang.org/x/net/idna"
 	"golang.org/x/net/lex/httplex"
+	http "github.com/tjfoc/gmhttp"
+	tls "github.com/tjfoc/gmtls"
 )
 
 const (

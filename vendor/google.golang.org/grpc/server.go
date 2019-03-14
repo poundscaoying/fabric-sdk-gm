@@ -39,7 +39,7 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"net/http"
+	//"net/http"
 	"reflect"
 	"runtime"
 	"strings"
@@ -59,6 +59,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/tap"
 	"google.golang.org/grpc/transport"
+	http "github.com/tjfoc/gmhttp"
 )
 
 const (

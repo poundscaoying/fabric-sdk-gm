@@ -571,7 +571,6 @@ func (c *Client) queryBySystemChaincodeByTarget(chaincodeID string, fcn string, 
 		Targets:     targets,
 	}
 	responses, err := channel.QueryBySystemChaincode(request, c)
-
 	if err != nil {
 		return nil, fmt.Errorf("Error from QueryBySystemChaincode: %s", err)
 	}

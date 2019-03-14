@@ -62,7 +62,7 @@ func SendInstantiateCC(channel fab.Channel, chainCodeID string, args []string,
 
 	// Register for commit event
 	done, fail := internal.RegisterTxEvent(txID, eventHub)
-
+	fmt.Printf("========test!============ ")
 	if _, err = internal.CreateAndSendTransaction(channel, transactionProposalResponse); err != nil {
 		return fmt.Errorf("CreateTransaction returned error: %v", err)
 	}

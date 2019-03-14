@@ -7,8 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package apiconfig
 
 import (
-	"crypto/x509"
+	//"crypto/x509"
 	"time"
+	"github.com/tjfoc/gmsm/sm2"
 
 	bccspFactory "github.com/hyperledger/fabric/bccsp/factory"
 )
@@ -28,8 +29,8 @@ type Config interface {
 	PeerConfig(org string, name string) (*PeerConfig, error)
 	NetworkConfig() (*NetworkConfig, error)
 	IsTLSEnabled() bool
-	SetTLSCACertPool(*x509.CertPool)
-	TLSCACertPool(tlsCertificate string) (*x509.CertPool, error)
+	SetTLSCACertPool(*sm2.CertPool)
+	TLSCACertPool(tlsCertificate string) (*sm2.CertPool, error)
 	IsSecurityEnabled() bool
 	TcertBatchSize() int
 	SecurityAlgorithm() string

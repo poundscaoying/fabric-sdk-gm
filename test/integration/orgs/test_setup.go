@@ -59,7 +59,7 @@ var foundChannel bool
 // initializeFabricClient initializes fabric-sdk-go
 func initializeFabricClient(t *testing.T) {
 	// Initialize configuration
-	configImpl, err := config.InitConfig("../../fixtures/config/config_test.yaml")
+	configImpl, err := config.InitConfig("../../fixtures/config/config-test.yaml")
 	failTestIfError(err, t)
 
 	// Instantiate client

@@ -1,17 +1,9 @@
 /*
-Copyright IBM Corp. 2017 All Rights Reserved.
+Copyright IBM Corp. All Rights Reserved.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+SPDX-License-Identifier: Apache-2.0
 
-		 http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Modified create GM SM2 options by Tongji Fintech Research Institute on 2017-09-20.
 */
 
 package msp
@@ -19,15 +11,16 @@ package msp
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/pem"
+	"errors"
+	"fmt"
 	"math/big"
 	"time"
 
-	"errors"
-
-	"github.com/hyperledger/fabric/bccsp/sw"
+	"github.com/hyperledger/fabric/bccsp/gm"
+	"github.com/tjfoc/gmsm/sm2"
 )
 
 type dsaSignature struct {
@@ -67,18 +60,18 @@ type tbsCertificate struct {
 	Extensions         []pkix.Extension `asn1:"optional,explicit,tag:3"`
 }
 
-func isECDSASignedCert(cert *x509.Certificate) bool {
-	return cert.SignatureAlgorithm == x509.ECDSAWithSHA1 ||
-		cert.SignatureAlgorithm == x509.ECDSAWithSHA256 ||
-		cert.SignatureAlgorithm == x509.ECDSAWithSHA384 ||
-		cert.SignatureAlgorithm == x509.ECDSAWithSHA512
+func isECDSASignedCert(cert *sm2.Certificate) bool {
+	return cert.SignatureAlgorithm == sm2.ECDSAWithSHA1 ||
+		cert.SignatureAlgorithm == sm2.ECDSAWithSHA256 ||
+		cert.SignatureAlgorithm == sm2.ECDSAWithSHA384 ||
+		cert.SignatureAlgorithm == sm2.ECDSAWithSHA512
 }
 
 // sanitizeECDSASignedCert checks that the signatures signing a cert
 // is in low-S. This is checked against the public key of parentCert.
 // If the signature is not in low-S, then a new certificate is generated
 // that is equals to cert but the signature that is in low-S.
-func sanitizeECDSASignedCert(cert *x509.Certificate, parentCert *x509.Certificate) (*x509.Certificate, error) {
+func sanitizeECDSASignedCert(cert *sm2.Certificate, parentCert *sm2.Certificate) (*sm2.Certificate, error) {
 	if cert == nil {
 		return nil, errors.New("Certificate must be different from nil.")
 	}
@@ -86,7 +79,7 @@ func sanitizeECDSASignedCert(cert *x509.Certificate, parentCert *x509.Certificat
 		return nil, errors.New("Parent certificate must be different from nil.")
 	}
 
-	expectedSig, err := sw.SignatureToLowS(parentCert.PublicKey.(*ecdsa.PublicKey), cert.Signature)
+	expectedSig, err := gm.SignatureToLowS(parentCert.PublicKey.(*ecdsa.PublicKey), cert.Signature)
 	if err != nil {
 		return nil, err
 	}
@@ -95,13 +88,13 @@ func sanitizeECDSASignedCert(cert *x509.Certificate, parentCert *x509.Certificat
 	if bytes.Equal(cert.Signature, expectedSig) {
 		return cert, nil
 	}
-	// otherwise create a new certificate with the new signature
 
+	// otherwise create a new certificate with the new signature
 	// 1. Unmarshal cert.Raw to get an instance of certificate,
-	//    the lower level interface that represent an x509 certificate
+	//    the lower level interface that represent an sm2 certificate
 	//    encoding
 	var newCert certificate
-	_, err = asn1.Unmarshal(cert.Raw, &newCert)
+	newCert, err = certFromSM2Cert(cert)
 	if err != nil {
 		return nil, err
 	}
@@ -116,6 +109,49 @@ func sanitizeECDSASignedCert(cert *x509.Certificate, parentCert *x509.Certificat
 		return nil, err
 	}
 
-	// 4. parse newRaw to get an x509 certificate
-	return x509.ParseCertificate(newRaw)
+	// 4. parse newRaw to get an sm2 certificate
+	return sm2.ParseCertificate(newRaw)
+}
+
+// func certFromX509Cert(cert *x509.Certificate) (certificate, error) {
+// 	var newCert certificate
+// 	_, err := asn1.Unmarshal(cert.Raw, &newCert)
+// 	if err != nil {
+// 		return certificate{}, err
+// 	}
+// 	return newCert, nil
+// }
+
+func certFromSM2Cert(cert *sm2.Certificate) (certificate, error) {
+	var newCert certificate
+	_, err := asn1.Unmarshal(cert.Raw, &newCert)
+	if err != nil {
+		return certificate{}, err
+	}
+	return newCert, nil
+}
+
+// String returns a PEM representation of a certificate
+func (c certificate) String() string {
+	b, err := asn1.Marshal(c)
+	if err != nil {
+		return fmt.Sprintf("Failed marshaling cert: %v", err)
+	}
+	block := &pem.Block{
+		Bytes: b,
+		Type:  "CERTIFICATE",
+	}
+	b = pem.EncodeToMemory(block)
+	return string(b)
+}
+
+// certToPEM converts the given sm2.Certificate to a PEM
+// encoded string
+func certToPEM(certificate *sm2.Certificate) string {
+	cert, err := certFromSM2Cert(certificate)
+	if err != nil {
+		mspIdentityLogger.Warning("Failed converting certificate to asn1", err)
+		return ""
+	}
+	return cert.String()
 }

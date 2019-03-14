@@ -9,9 +9,10 @@ package http2
 import (
 	"context"
 	"net"
-	"net/http"
+	//"net/http"
 	"net/http/httptrace"
 	"time"
+	http "github.com/tjfoc/gmhttp"
 )
 
 type contextContext interface {

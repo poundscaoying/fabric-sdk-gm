@@ -16,6 +16,7 @@ limitations under the License.
 package sw
 
 import (
+	"fmt"
 	"crypto/elliptic"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -308,6 +309,7 @@ func (csp *impl) GetHash(opts bccsp.HashOpts) (h hash.Hash, err error) {
 // the caller is responsible for hashing the larger message and passing
 // the hash (as digest).
 func (csp *impl) Sign(k bccsp.Key, digest []byte, opts bccsp.SignerOpts) (signature []byte, err error) {
+	fmt.Println("-----------sw impl Sign--------------")
 	// Validate arguments
 	if k == nil {
 		return nil, errors.ErrorWithCallstack(errors.BCCSP, errors.BadRequest, "Invalid Key. It must not be nil.")

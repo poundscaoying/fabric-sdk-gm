@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package config
 
 import (
-	"crypto/x509"
+	//"crypto/x509"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -22,6 +22,7 @@ import (
 	bccspFactory "github.com/hyperledger/fabric/bccsp/factory"
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
+	"github.com/tjfoc/gmsm/sm2"
 )
 
 var myViper = viper.New()
@@ -37,7 +38,7 @@ const (
 
 // Config represents the configuration for the client
 type Config struct {
-	tlsCertPool         *x509.CertPool
+	tlsCertPool         *sm2.CertPool
 	networkConfig       *apiconfig.NetworkConfig
 	networkConfigCached bool
 }
@@ -84,7 +85,7 @@ func InitConfigWithCmdRoot(configFile string, cmdRootPrefix string) (*Config, er
 	}
 	logging.SetBackend(backendFormatter).SetLevel(logging.Level(logLevel), "fabric_sdk_go")
 
-	return &Config{tlsCertPool: x509.NewCertPool()}, nil
+	return &Config{tlsCertPool: sm2.NewCertPool()}, nil
 }
 
 // CAConfig returns the CA configuration.
@@ -303,16 +304,16 @@ func (c *Config) IsTLSEnabled() bool {
 
 // SetTLSCACertPool allows a user to set a global cert pool with a set of
 // root TLS CAs that will be used for all outgoing connections
-func (c *Config) SetTLSCACertPool(certPool *x509.CertPool) {
+func (c *Config) SetTLSCACertPool(certPool *sm2.CertPool) {
 	if certPool == nil {
-		certPool = x509.NewCertPool()
+		certPool = sm2.NewCertPool()
 	}
 	c.tlsCertPool = certPool
 }
 
 // TLSCACertPool returns the configured cert pool. If a tlsCertificate path
 // is provided, the certficate is added to the pool
-func (c *Config) TLSCACertPool(tlsCertificate string) (*x509.CertPool, error) {
+func (c *Config) TLSCACertPool(tlsCertificate string) (*sm2.CertPool, error) {
 	if tlsCertificate != "" {
 		rawData, err := ioutil.ReadFile(tlsCertificate)
 		if err != nil {
@@ -373,11 +374,11 @@ func (c *Config) CryptoConfigPath() string {
 }
 
 // loadCAKey
-func loadCAKey(rawData []byte) (*x509.Certificate, error) {
+func loadCAKey(rawData []byte) (*sm2.Certificate, error) {
 	block, _ := pem.Decode(rawData)
 
 	if block != nil {
-		pub, err := x509.ParseCertificate(block.Bytes)
+		pub, err := sm2.ParseCertificate(block.Bytes)
 		if err != nil {
 			return nil, errors.New("Failed to parse certificate: " + err.Error())
 		}

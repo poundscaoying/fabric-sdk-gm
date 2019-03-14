@@ -7,8 +7,9 @@
 package http2
 
 import (
-	"net/http"
+	//"net/http"
 	"time"
+	http "github.com/tjfoc/gmhttp"
 )
 
 func transportExpectContinueTimeout(t1 *http.Transport) time.Duration {

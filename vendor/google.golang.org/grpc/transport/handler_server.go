@@ -42,7 +42,7 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"net/http"
+	//"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -54,6 +54,8 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+
+	http "github.com/tjfoc/gmhttp"
 )
 
 // NewServerHandlerTransport returns a ServerTransport handling gRPC

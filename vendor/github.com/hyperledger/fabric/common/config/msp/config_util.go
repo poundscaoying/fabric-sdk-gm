@@ -64,7 +64,6 @@ func TemplateGroupMSPWithAdminRolePrincipal(configPath []string, mspConfig *mspp
 
 	// add the MSP to the map of pending MSPs
 	mspID, _ := mspInst.GetIdentifier()
-
 	memberPolicy := &cb.ConfigPolicy{
 		Policy: &cb.Policy{
 			Type:  int32(cb.Policy_SIGNATURE),
@@ -99,6 +98,7 @@ func TemplateGroupMSPWithAdminRolePrincipal(configPath []string, mspConfig *mspp
 	intermediate.Policies[AdminsPolicyKey] = adminPolicy
 	intermediate.Policies[ReadersPolicyKey] = memberPolicy
 	intermediate.Policies[WritersPolicyKey] = memberPolicy
+
 	return result
 }
 

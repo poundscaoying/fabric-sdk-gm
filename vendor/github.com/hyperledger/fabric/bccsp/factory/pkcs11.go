@@ -14,11 +14,13 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+Modified create gmfactory by Tongji Fintech Research Institute on 2017-09-10.
 */
 package factory
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/pkcs11"
@@ -48,9 +50,12 @@ func setFactories(config *FactoryOpts) error {
 		config = GetDefaultOpts()
 	}
 
-	if config.ProviderName == "" {
-		config.ProviderName = "SW"
-	}
+	// if config.ProviderName == "" {
+	// 	config.ProviderName = "GM"
+	// }
+
+	//暂时由GM替代bccsp
+	config.ProviderName = "GM"
 
 	if config.SwOpts == nil {
 		config.SwOpts = GetDefaultOpts().SwOpts
@@ -61,7 +66,12 @@ func setFactories(config *FactoryOpts) error {
 
 	// Software-Based BCCSP
 	if config.SwOpts != nil {
-		f := &SWFactory{}
+		var f BCCSPFactory
+		if strings.ToUpper(config.ProviderName) == "GM" {
+			f = &GMFactory{}
+		} else {
+			f = &SWFactory{}
+		}
 		err := initBCCSP(f, config)
 		if err != nil {
 			factoriesInitError = fmt.Errorf("Failed initializing SW.BCCSP [%s]", err)
@@ -90,6 +100,8 @@ func setFactories(config *FactoryOpts) error {
 func GetBCCSPFromOpts(config *FactoryOpts) (bccsp.BCCSP, error) {
 	var f BCCSPFactory
 	switch config.ProviderName {
+	case "GM":
+		f = &GMFactory{}
 	case "SW":
 		f = &SWFactory{}
 	case "PKCS11":

@@ -12,8 +12,8 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+Modified gm opts  by Tongji Fintech Research Institute on 2017-09-8
 */
-
 package bccsp
 
 const (
@@ -31,6 +31,9 @@ const (
 
 	// ECDSAReRand ECDSA key re-randomization
 	ECDSAReRand = "ECDSA_RERAND"
+
+	GMSM2ReRand = "GMSM2_RERAND"
+
 
 	// RSA at the default security level.
 	// Each BCCSP may or may not support default security level. If not supported than
@@ -55,6 +58,12 @@ const (
 	AES192 = "AES192"
 	// AES Advanced Encryption Standard at 256 bit security level
 	AES256 = "AES256"
+	// GMSM4
+	GMSM4 = "GMSM4"
+	// GMSM3
+	GMSM3 = "GMSM3"
+	// GMSM2
+	GMSM2 = "GMSM2"
 
 	// HMAC keyed-hash message authentication code
 	HMAC = "HMAC"
@@ -97,6 +106,38 @@ func (opts *ECDSAKeyGenOpts) Algorithm() string {
 // Ephemeral returns true if the key to generate has to be ephemeral,
 // false otherwise.
 func (opts *ECDSAKeyGenOpts) Ephemeral() bool {
+	return opts.Temporary
+}
+
+// GMSM2KeyGenOpts contains options for GMSM2 key generation.
+type GMSM2KeyGenOpts struct {
+	Temporary bool
+}
+
+// Algorithm returns the key generation algorithm identifier (to be used).
+func (opts *GMSM2KeyGenOpts) Algorithm() string {
+	return GMSM2
+}
+
+// Ephemeral returns true if the key to generate has to be ephemeral,
+// false otherwise.
+func (opts *GMSM2KeyGenOpts) Ephemeral() bool {
+	return opts.Temporary
+}
+
+// GMSM4KeyGenOpts contains options for GMSM2 key generation.
+type GMSM4KeyGenOpts struct {
+	Temporary bool
+}
+
+// Algorithm returns the key generation algorithm identifier (to be used).
+func (opts *GMSM4KeyGenOpts) Algorithm() string {
+	return GMSM4
+}
+
+// Ephemeral returns true if the key to generate has to be ephemeral,
+// false otherwise.
+func (opts *GMSM4KeyGenOpts) Ephemeral() bool {
 	return opts.Temporary
 }
 
@@ -252,6 +293,54 @@ func (opts *AES256ImportKeyOpts) Ephemeral() bool {
 	return opts.Temporary
 }
 
+//GMSM4ImportKeyOpts  实现  bccsp.KeyImportOpts 接口
+type GMSM4ImportKeyOpts struct {
+	Temporary bool
+}
+
+// Algorithm returns the key importation algorithm identifier (to be used).
+func (opts *GMSM4ImportKeyOpts) Algorithm() string {
+	return GMSM4
+}
+
+// Ephemeral returns true if the key generated has to be ephemeral,
+// false otherwise.
+func (opts *GMSM4ImportKeyOpts) Ephemeral() bool {
+	return opts.Temporary
+}
+
+//GMSM2PrivateKeyImportOpts  实现  bccsp.KeyImportOpts 接口
+type GMSM2PrivateKeyImportOpts struct {
+	Temporary bool
+}
+
+// Algorithm returns the key importation algorithm identifier (to be used).
+func (opts *GMSM2PrivateKeyImportOpts) Algorithm() string {
+	return GMSM2
+}
+
+// Ephemeral returns true if the key generated has to be ephemeral,
+// false otherwise.
+func (opts *GMSM2PrivateKeyImportOpts) Ephemeral() bool {
+	return opts.Temporary
+}
+
+//GMSM2PublicKeyImportOpts  实现  bccsp.KeyImportOpts 接口
+type GMSM2PublicKeyImportOpts struct {
+	Temporary bool
+}
+
+// Algorithm returns the key importation algorithm identifier (to be used).
+func (opts *GMSM2PublicKeyImportOpts) Algorithm() string {
+	return GMSM2
+}
+
+// Ephemeral returns true if the key generated has to be ephemeral,
+// false otherwise.
+func (opts *GMSM2PublicKeyImportOpts) Ephemeral() bool {
+	return opts.Temporary
+}
+
 // HMACImportKeyOpts contains options for importing HMAC keys.
 type HMACImportKeyOpts struct {
 	Temporary bool
@@ -324,3 +413,28 @@ func (opts *X509PublicKeyImportOpts) Algorithm() string {
 func (opts *X509PublicKeyImportOpts) Ephemeral() bool {
 	return opts.Temporary
 }
+
+
+//test
+// ECDSAReRandKeyOpts contains options for ECDSA key re-randomization.
+type GMSM2ReRandKeyOpts struct {
+	Temporary bool
+	Expansion []byte
+}
+
+// Algorithm returns the key derivation algorithm identifier (to be used).
+func (opts *GMSM2ReRandKeyOpts) Algorithm() string {
+	return GMSM2ReRand
+}
+
+// Ephemeral returns true if the key to generate has to be ephemeral,
+// false otherwise.
+func (opts *GMSM2ReRandKeyOpts) Ephemeral() bool {
+	return opts.Temporary
+}
+
+// ExpansionValue returns the re-randomization factor
+func (opts *GMSM2ReRandKeyOpts) ExpansionValue() []byte {
+	return opts.Expansion
+}
+//*test

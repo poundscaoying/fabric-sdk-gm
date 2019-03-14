@@ -108,6 +108,14 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		}
 		return t.move(stub, args)
 	}
+
+	if args[0] == "insert" {
+		if err := stub.SetEvent("testEvent", []byte("Test Payload")); err != nil {
+			return shim.Error("Unable to set CC event: testEvent. Aborting transaction ...")
+		}
+		return t.insert(stub, args)
+	}
+
 	return shim.Error("Unknown action, check the first argument, must be one of 'delete', 'query', or 'move'")
 }
 
@@ -218,6 +226,46 @@ func (t *SimpleChaincode) query(stub shim.ChaincodeStubInterface, args []string)
 	return shim.Success(Avalbytes)
 }
 
+
+// Init ...
+func (t *SimpleChaincode) insert(stub shim.ChaincodeStubInterface,args []string) pb.Response {
+	fmt.Println("########### example_cc INVOKE insert ###########")
+	var A string    // Entities
+	var Aval int // Asset holdings
+	var err error
+
+	if len(args) != 3 {
+		return shim.Error("Incorrect number of arguments. Expecting 3")
+	}
+
+	// Initialize the chaincode
+	A = args[1]
+	Aval, err = strconv.Atoi(args[2])
+	if err != nil {
+		return shim.Error("Expecting integer value for asset holding")
+	}
+
+	if err != nil {
+		return shim.Error("Expecting integer value for asset holding")
+	}
+	fmt.Printf("Aval = %d\n", Aval)
+
+	// Write the state to the ledger
+	err = stub.PutState(A, []byte(strconv.Itoa(Aval)))
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+
+	if transientMap, err := stub.GetTransient(); err == nil {
+		if transientData, ok := transientMap["result"]; ok {
+			fmt.Printf("Transient data in 'init' : %s\n", transientData)
+			return shim.Success(transientData)
+		}
+	}
+	return shim.Success(nil)
+
+}
 func main() {
 	err := shim.Start(new(SimpleChaincode))
 	if err != nil {

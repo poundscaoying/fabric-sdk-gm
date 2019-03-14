@@ -2,13 +2,17 @@
 Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
+
+Modified create GM options by Tongji Fintech Research Institute on 2017-09-15.
 */
 
 package msp
 
 import (
 	"bytes"
-	"crypto/x509"
+	"time"
+	//"crypto/x509"
+
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/hex"
@@ -17,13 +21,13 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
-	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/factory"
 	"github.com/hyperledger/fabric/bccsp/signer"
 	m "github.com/hyperledger/fabric/protos/msp"
+	"github.com/tjfoc/gmsm/sm2"
 )
 
 // This is an instantiation of an MSP that
@@ -60,7 +64,7 @@ type bccspmsp struct {
 	name string
 
 	// verification options for MSP members
-	opts *x509.VerifyOptions
+	opts *sm2.VerifyOptions
 
 	// list of certificate revocation lists
 	CRL []*pkix.CertificateList
@@ -86,7 +90,7 @@ func NewBccspMsp() (MSP, error) {
 	return theMsp, nil
 }
 
-func (msp *bccspmsp) getCertFromPem(idBytes []byte) (*x509.Certificate, error) {
+func (msp *bccspmsp) getCertFromPem(idBytes []byte) (*sm2.Certificate, error) {
 	if idBytes == nil {
 		return nil, fmt.Errorf("getIdentityFromConf error: nil idBytes")
 	}
@@ -98,10 +102,10 @@ func (msp *bccspmsp) getCertFromPem(idBytes []byte) (*x509.Certificate, error) {
 	}
 
 	// get a cert
-	var cert *x509.Certificate
-	cert, err := x509.ParseCertificate(pemCert.Bytes)
+	var cert *sm2.Certificate
+	cert, err := sm2.ParseCertificate(pemCert.Bytes)
 	if err != nil {
-		return nil, fmt.Errorf("getIdentityFromBytes error: failed to parse x509 cert, err %s", err)
+		return nil, fmt.Errorf("getIdentityFromBytes error: failed to parse sm2 cert, err %s", err)
 	}
 
 	return cert, nil
@@ -116,6 +120,10 @@ func (msp *bccspmsp) getIdentityFromConf(idBytes []byte) (Identity, bccsp.Key, e
 
 	// get the public key in the right format
 	certPubK, err := msp.bccsp.KeyImport(cert, &bccsp.X509PublicKeyImportOpts{Temporary: true})
+
+	if err != nil {
+		return nil, nil, fmt.Errorf("KeyImport failed [%s]", err)
+	}
 
 	// Use the hash of the identity's certificate as id in the IdentityIdentifier
 	hashOpt, err := bccsp.GetHashOpt(msp.cryptoConfig.IdentityIdentifierHashFunction)
@@ -136,7 +144,6 @@ func (msp *bccspmsp) getIdentityFromConf(idBytes []byte) (Identity, bccsp.Key, e
 	if err != nil {
 		return nil, nil, err
 	}
-
 	return mspId, certPubK, nil
 }
 
@@ -236,7 +243,7 @@ func getAuthorityKeyIdentifierFromCrl(crl *pkix.CertificateList) ([]byte, error)
 
 // getSubjectKeyIdentifierFromCert returns the Subject Key Identifier for the supplied certificate
 // Subject Key Identifier is an identifier of the public key of this certificate
-func getSubjectKeyIdentifierFromCert(cert *x509.Certificate) ([]byte, error) {
+func getSubjectKeyIdentifierFromCert(cert *sm2.Certificate) ([]byte, error) {
 	var SKI []byte
 
 	for _, ext := range cert.Extensions {
@@ -258,7 +265,7 @@ func getSubjectKeyIdentifierFromCert(cert *x509.Certificate) ([]byte, error) {
 // isCACert does a few checks on the certificate,
 // assuming it's a CA; it returns true if all looks good
 // and false otherwise
-func isCACert(cert *x509.Certificate) bool {
+func isCACert(cert *sm2.Certificate) bool {
 	_, err := getSubjectKeyIdentifierFromCert(cert)
 	if err != nil {
 		return false
@@ -339,7 +346,6 @@ func (msp *bccspmsp) Setup(conf1 *m.MSPConfig) error {
 			return fmt.Errorf("admin %d is invalid, validation error %s", i, err)
 		}
 	}
-
 	return nil
 }
 
@@ -405,7 +411,6 @@ func (msp *bccspmsp) Validate(id Identity) error {
 // representation of a SerializedIdentity struct
 func (msp *bccspmsp) DeserializeIdentity(serializedID []byte) (Identity, error) {
 	mspLogger.Infof("Obtaining identity")
-
 	// We first deserialize to a SerializedIdentity to get the MSP ID
 	sId := &m.SerializedIdentity{}
 	err := proto.Unmarshal(serializedID, sId)
@@ -427,7 +432,7 @@ func (msp *bccspmsp) deserializeIdentityInternal(serializedIdentity []byte) (Ide
 	if bl == nil {
 		return nil, fmt.Errorf("Could not decode the PEM structure")
 	}
-	cert, err := x509.ParseCertificate(bl.Bytes)
+	cert, err := sm2.ParseCertificate(bl.Bytes)
 	if err != nil {
 		return nil, fmt.Errorf("ParseCertificate failed %s", err)
 	}
@@ -555,7 +560,7 @@ func (msp *bccspmsp) SatisfiesPrincipal(id Identity, principal *m.MSPPrincipal) 
 }
 
 // getCertificationChain returns the certification chain of the passed identity within this msp
-func (msp *bccspmsp) getCertificationChain(id Identity) ([]*x509.Certificate, error) {
+func (msp *bccspmsp) getCertificationChain(id Identity) ([]*sm2.Certificate, error) {
 	mspLogger.Debugf("MSP %s getting certification chain", msp.name)
 
 	switch id := id.(type) {
@@ -570,7 +575,7 @@ func (msp *bccspmsp) getCertificationChain(id Identity) ([]*x509.Certificate, er
 }
 
 // getCertificationChainForBCCSPIdentity returns the certification chain of the passed bccsp identity within this msp
-func (msp *bccspmsp) getCertificationChainForBCCSPIdentity(id *identity) ([]*x509.Certificate, error) {
+func (msp *bccspmsp) getCertificationChainForBCCSPIdentity(id *identity) ([]*sm2.Certificate, error) {
 	if id == nil {
 		return nil, errors.New("Invalid bccsp identity. Must be different from nil.")
 	}
@@ -588,11 +593,12 @@ func (msp *bccspmsp) getCertificationChainForBCCSPIdentity(id *identity) ([]*x50
 	return msp.getValidationChain(id.cert, false)
 }
 
-func (msp *bccspmsp) getUniqueValidationChain(cert *x509.Certificate, opts x509.VerifyOptions) ([]*x509.Certificate, error) {
+func (msp *bccspmsp) getUniqueValidationChain(cert *sm2.Certificate, opts sm2.VerifyOptions) ([]*sm2.Certificate, error) {
 	// ask golang to validate the cert for us based on the options that we've built at setup time
 	if msp.opts == nil {
 		return nil, fmt.Errorf("The supplied identity has no verify options")
 	}
+
 	validationChains, err := cert.Verify(opts)
 	if err != nil {
 		return nil, fmt.Errorf("The supplied identity is not valid, Verify() returned %s", err)
@@ -608,7 +614,7 @@ func (msp *bccspmsp) getUniqueValidationChain(cert *x509.Certificate, opts x509.
 	return validationChains[0], nil
 }
 
-func (msp *bccspmsp) getValidationChain(cert *x509.Certificate, isIntermediateChain bool) ([]*x509.Certificate, error) {
+func (msp *bccspmsp) getValidationChain(cert *sm2.Certificate, isIntermediateChain bool) ([]*sm2.Certificate, error) {
 	validationChain, err := msp.getUniqueValidationChain(cert, msp.getValidityOptsForCert(cert))
 	if err != nil {
 		return nil, fmt.Errorf("Failed getting validation chain %s", err)
@@ -644,7 +650,7 @@ func (msp *bccspmsp) getCertificationChainIdentifier(id Identity) ([]byte, error
 	return msp.getCertificationChainIdentifierFromChain(chain[1:])
 }
 
-func (msp *bccspmsp) getCertificationChainIdentifierFromChain(chain []*x509.Certificate) ([]byte, error) {
+func (msp *bccspmsp) getCertificationChainIdentifierFromChain(chain []*sm2.Certificate) ([]byte, error) {
 	// Hash the chain
 	// Use the hash of the identity's certificate as id in the IdentityIdentifier
 	hashOpt, err := bccsp.GetHashOpt(msp.cryptoConfig.IdentityIdentifierHashFunction)
@@ -695,7 +701,7 @@ func (msp *bccspmsp) setupCAs(conf *m.FabricMSPConfig) error {
 	// Recall that sanitization is applied also to root CA and intermediate
 	// CA certificates. After their sanitization is done, the opts
 	// will be recreated using the sanitized certs.
-	msp.opts = &x509.VerifyOptions{Roots: x509.NewCertPool(), Intermediates: x509.NewCertPool()}
+	msp.opts = &sm2.VerifyOptions{Roots: sm2.NewCertPool(), Intermediates: sm2.NewCertPool()}
 	for _, v := range conf.RootCerts {
 		cert, err := msp.getCertFromPem(v)
 		if err != nil {
@@ -735,10 +741,11 @@ func (msp *bccspmsp) setupCAs(conf *m.FabricMSPConfig) error {
 	}
 
 	// root CA and intermediate CA certificates are sanitized, they can be reimported
-	msp.opts = &x509.VerifyOptions{Roots: x509.NewCertPool(), Intermediates: x509.NewCertPool()}
+	msp.opts = &sm2.VerifyOptions{Roots: sm2.NewCertPool(), Intermediates: sm2.NewCertPool()}
 	for _, id := range msp.rootCerts {
 		msp.opts.Roots.AddCert(id.(*identity).cert)
 	}
+
 	for _, id := range msp.intermediateCerts {
 		msp.opts.Intermediates.AddCert(id.(*identity).cert)
 	}
@@ -776,7 +783,7 @@ func (msp *bccspmsp) setupCRLs(conf *m.FabricMSPConfig) error {
 	// setup the CRL (if present)
 	msp.CRL = make([]*pkix.CertificateList, len(conf.RevocationList))
 	for i, crlbytes := range conf.RevocationList {
-		crl, err := x509.ParseCRL(crlbytes)
+		crl, err := sm2.ParseCRL(crlbytes)
 		if err != nil {
 			return fmt.Errorf("Could not parse RevocationList, err %s", err)
 		}
@@ -877,9 +884,9 @@ func (msp *bccspmsp) setupOUs(conf *m.FabricMSPConfig) error {
 
 		// 3. get the certification path for it
 		var certifiersIdentitifer []byte
-		var chain []*x509.Certificate
+		var chain []*sm2.Certificate
 		if root {
-			chain = []*x509.Certificate{cert}
+			chain = []*sm2.Certificate{cert}
 		} else {
 			chain, err = msp.getValidationChain(cert, true)
 			if err != nil {
@@ -917,11 +924,11 @@ func (msp *bccspmsp) setupOUs(conf *m.FabricMSPConfig) error {
 
 func (msp *bccspmsp) setupTLSCAs(conf *m.FabricMSPConfig) error {
 
-	opts := &x509.VerifyOptions{Roots: x509.NewCertPool(), Intermediates: x509.NewCertPool()}
+	opts := &sm2.VerifyOptions{Roots: sm2.NewCertPool(), Intermediates: sm2.NewCertPool()}
 
 	// Load TLS root and intermediate CA identities
 	msp.tlsRootCerts = make([][]byte, len(conf.TlsRootCerts))
-	rootCerts := make([]*x509.Certificate, len(conf.TlsRootCerts))
+	rootCerts := make([]*sm2.Certificate, len(conf.TlsRootCerts))
 	for i, trustedCert := range conf.TlsRootCerts {
 		cert, err := msp.getCertFromPem(trustedCert)
 		if err != nil {
@@ -935,7 +942,7 @@ func (msp *bccspmsp) setupTLSCAs(conf *m.FabricMSPConfig) error {
 
 	// make and fill the set of intermediate certs (if present)
 	msp.tlsIntermediateCerts = make([][]byte, len(conf.TlsIntermediateCerts))
-	intermediateCerts := make([]*x509.Certificate, len(conf.TlsIntermediateCerts))
+	intermediateCerts := make([]*sm2.Certificate, len(conf.TlsIntermediateCerts))
 	for i, trustedCert := range conf.TlsIntermediateCerts {
 		cert, err := msp.getCertFromPem(trustedCert)
 		if err != nil {
@@ -948,7 +955,7 @@ func (msp *bccspmsp) setupTLSCAs(conf *m.FabricMSPConfig) error {
 	}
 
 	// ensure that our CAs are properly formed and that they are valid
-	for _, cert := range append(append([]*x509.Certificate{}, rootCerts...), intermediateCerts...) {
+	for _, cert := range append(append([]*sm2.Certificate{}, rootCerts...), intermediateCerts...) {
 		if cert == nil {
 			continue
 		}
@@ -965,13 +972,13 @@ func (msp *bccspmsp) setupTLSCAs(conf *m.FabricMSPConfig) error {
 	return nil
 }
 
-// sanitizeCert ensures that x509 certificates signed using ECDSA
+// sanitizeCert ensures that sm2 certificates signed using ECDSA
 // do have signatures in Low-S. If this is not the case, the certificate
 // is regenerated to have a Low-S signature.
-func (msp *bccspmsp) sanitizeCert(cert *x509.Certificate) (*x509.Certificate, error) {
+func (msp *bccspmsp) sanitizeCert(cert *sm2.Certificate) (*sm2.Certificate, error) {
 	if isECDSASignedCert(cert) {
 		// Lookup for a parent certificate to perform the sanitization
-		var parentCert *x509.Certificate
+		var parentCert *sm2.Certificate
 		if cert.IsCA {
 			// at this point, cert might be a root CA certificate
 			// or an intermediate CA certificate
@@ -994,7 +1001,7 @@ func (msp *bccspmsp) sanitizeCert(cert *x509.Certificate) (*x509.Certificate, er
 			parentCert = chain[1]
 		}
 
-		// Sanitize
+		// Sanitize 审查
 		var err error
 		cert, err = sanitizeECDSASignedCert(cert, parentCert)
 		if err != nil {
@@ -1040,7 +1047,7 @@ func (msp *bccspmsp) validateCAIdentity(id *identity) error {
 	return msp.validateIdentityAgainstChain(id, validationChain)
 }
 
-func (msp *bccspmsp) validateTLSCAIdentity(cert *x509.Certificate, opts *x509.VerifyOptions) error {
+func (msp *bccspmsp) validateTLSCAIdentity(cert *sm2.Certificate, opts *sm2.VerifyOptions) error {
 	if !cert.IsCA {
 		return errors.New("Only CA identities can be validated")
 	}
@@ -1057,11 +1064,11 @@ func (msp *bccspmsp) validateTLSCAIdentity(cert *x509.Certificate, opts *x509.Ve
 	return msp.validateCertAgainstChain(cert, validationChain)
 }
 
-func (msp *bccspmsp) validateIdentityAgainstChain(id *identity, validationChain []*x509.Certificate) error {
+func (msp *bccspmsp) validateIdentityAgainstChain(id *identity, validationChain []*sm2.Certificate) error {
 	return msp.validateCertAgainstChain(id.cert, validationChain)
 }
 
-func (msp *bccspmsp) validateCertAgainstChain(cert *x509.Certificate, validationChain []*x509.Certificate) error {
+func (msp *bccspmsp) validateCertAgainstChain(cert *sm2.Certificate, validationChain []*sm2.Certificate) error {
 	// here we know that the identity is valid; now we have to check whether it has been revoked
 
 	// identify the SKI of the CA that signed this cert
@@ -1142,14 +1149,15 @@ func (msp *bccspmsp) validateIdentityOUs(id *identity) error {
 	return nil
 }
 
-func (msp *bccspmsp) getValidityOptsForCert(cert *x509.Certificate) x509.VerifyOptions {
+func (msp *bccspmsp) getValidityOptsForCert(cert *sm2.Certificate) sm2.VerifyOptions {
 	// First copy the opts to override the CurrentTime field
 	// in order to make the certificate passing the expiration test
 	// independently from the real local current time.
 	// This is a temporary workaround for FAB-3678
 
-	var tempOpts x509.VerifyOptions
+	var tempOpts sm2.VerifyOptions
 	tempOpts.Roots = msp.opts.Roots
+
 	tempOpts.DNSName = msp.opts.DNSName
 	tempOpts.Intermediates = msp.opts.Intermediates
 	tempOpts.KeyUsages = msp.opts.KeyUsages
@@ -1158,13 +1166,13 @@ func (msp *bccspmsp) getValidityOptsForCert(cert *x509.Certificate) x509.VerifyO
 	return tempOpts
 }
 
-func (msp *bccspmsp) getValidityOptsForTLSCert(cert *x509.Certificate) x509.VerifyOptions {
+func (msp *bccspmsp) getValidityOptsForTLSCert(cert *sm2.Certificate) sm2.VerifyOptions {
 	// First copy the opts to override the CurrentTime field
 	// in order to make the certificate passing the expiration test
 	// independently from the real local current time.
 	// This is a temporary workaround for FAB-3678
 
-	var tempOpts x509.VerifyOptions
+	var tempOpts sm2.VerifyOptions
 	tempOpts.Roots = msp.opts.Roots
 	tempOpts.Intermediates = msp.opts.Intermediates
 

@@ -7,9 +7,13 @@
 package http2
 
 import (
-	"crypto/tls"
+	//"crypto/tls"
 	"io"
-	"net/http"
+	//"net/http"
+	http "github.com/tjfoc/gmhttp"
+	tls "github.com/tjfoc/gmtls"
+
+
 )
 
 func cloneTLSConfig(c *tls.Config) *tls.Config {

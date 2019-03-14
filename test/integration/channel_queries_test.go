@@ -20,17 +20,27 @@ import (
 
 func TestChannelQueries(t *testing.T) {
 
+	//testSetup := &BaseSetupImpl{
+	//	ConfigFile:      "../fixtures/config/config_test.yaml",
+	//	ChannelID:       "mychannel",
+	//	OrgID:           org1Name,
+	//	ChannelConfig:   "../fixtures/channel-artifacts-nokafka/channel.tx",
+	//	ConnectEventHub: true,
+	//}
 	testSetup := &BaseSetupImpl{
-		ConfigFile:      "../fixtures/config/config_test.yaml",
+		ConfigFile:      "../fixtures/config/config-test.yaml",
 		ChannelID:       "mychannel",
 		OrgID:           org1Name,
-		ChannelConfig:   "../fixtures/channel/mychannel.tx",
+		ChannelConfig:   "../fixtures/channel-artifacts/channel.tx",
 		ConnectEventHub: true,
 	}
 
-	if err := testSetup.Initialize(); err != nil {
+	if err := testSetup.Initialize_noCA1(); err != nil {
 		t.Fatalf(err.Error())
 	}
+
+	fmt.Println("****************Initialize_noCA1 OK*******************")
+
 
 	channel := testSetup.Channel
 	client := testSetup.Client
@@ -39,17 +49,23 @@ func TestChannelQueries(t *testing.T) {
 		t.Fatalf("InstallAndInstantiateExampleCC return error: %v", err)
 	}
 
+	fmt.Println("****************InstallAndInstantiateExampleCC OK*******************")
+
 	// Test Query Info - retrieve values before transaction
 	bciBeforeTx, err := channel.QueryInfo()
 	if err != nil {
 		t.Fatalf("QueryInfo return error: %v", err)
 	}
 
+	fmt.Println("****************QueryInfo OK*******************")
+
 	// Invoke transaction that changes block state
 	txID, err := changeBlockState(testSetup)
 	if err != nil {
 		t.Fatalf("Failed to change block state (invoke transaction). Return error: %v", err)
 	}
+
+	fmt.Println("****************changeBlockState OK*******************")
 
 	// Test Query Info - retrieve values after transaction
 	bciAfterTx, err := channel.QueryInfo()
@@ -79,25 +95,31 @@ func TestChannelQueries(t *testing.T) {
 
 func changeBlockState(testSetup *BaseSetupImpl) (string, error) {
 
+	fmt.Println("---------changeBlockState-------------")
+
+	fmt.Println("##############ChaincodeID:",testSetup.ChainCodeID)
 	value, err := testSetup.QueryAsset()
+	fmt.Println("##############b:value:",value)
 	if err != nil {
 		return "", fmt.Errorf("getQueryValue return error: %v", err)
 	}
 
 	// Start transaction that will change block state
 	txID, err := moveFundsAndGetTxID(testSetup)
+	fmt.Println("##############TxID:",txID)
 	if err != nil {
 		return "", fmt.Errorf("Move funds return error: %v", err)
 	}
 
 	valueAfterInvoke, err := testSetup.QueryAsset()
+	fmt.Println("##############b valueAfterInvoke:",valueAfterInvoke)
 	if err != nil {
 		return "", fmt.Errorf("getQueryValue return error: %v", err)
 	}
 
 	// Verify that transaction changed block state
 	valueInt, _ := strconv.Atoi(value)
-	valueInt = valueInt + 1
+	valueInt = valueInt + 100
 	valueAfterInvokeInt, _ := strconv.Atoi(valueAfterInvoke)
 	if valueInt != valueAfterInvokeInt {
 		return "", fmt.Errorf("SendTransaction didn't change the QueryValue %s", value)
@@ -302,6 +324,8 @@ func testQueryByChaincode(t *testing.T, channel fab.Channel, config config.Confi
 
 // MoveFundsAndGetTxID ...
 func moveFundsAndGetTxID(setup *BaseSetupImpl) (string, error) {
+	fmt.Println("---------moveFundsAndGetTxID-------------")
+
 
 	fcn := "invoke"
 
@@ -309,7 +333,7 @@ func moveFundsAndGetTxID(setup *BaseSetupImpl) (string, error) {
 	args = append(args, "move")
 	args = append(args, "a")
 	args = append(args, "b")
-	args = append(args, "1")
+	args = append(args, "100")
 
 	transientDataMap := make(map[string][]byte)
 	transientDataMap["result"] = []byte("Transient data in move funds...")

@@ -72,9 +72,11 @@ func RegisterTxEvent(txID apitxn.TransactionID, eventHub fab.EventHub) (chan boo
 
 	eventHub.RegisterTxEvent(txID, func(txId string, errorCode pb.TxValidationCode, err error) {
 		if err != nil {
+		         fmt.Printf("========Received error event for txid!============ ")
 			logger.Debugf("Received error event for txid(%s)\n", txId)
 			fail <- err
 		} else {
+		        fmt.Printf("========Received success event for txid!============ ")
 			logger.Debugf("Received success event for txid(%s)\n", txId)
 			done <- true
 		}

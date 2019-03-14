@@ -16,6 +16,8 @@ import (
 	"github.com/hyperledger/fabric/common/crypto"
 	"github.com/hyperledger/fabric/protos/common"
 	protos_utils "github.com/hyperledger/fabric/protos/utils"
+//	"github.com/hyperledger/fabric/bccsp/gm"
+
 )
 
 // CreateSeekGenesisBlockRequest creates a seek request for block 0 on the specified
@@ -99,10 +101,17 @@ func BuildHeader(creator []byte, channelHeader *common.ChannelHeader, nonce []by
 func SignObjectWithKey(object []byte, key bccsp.Key,
 	hashOpts bccsp.HashOpts, signerOpts bccsp.SignerOpts, cryptoSuite bccsp.BCCSP) ([]byte, error) {
 	digest, err := cryptoSuite.Hash(object, hashOpts)
+
 	if err != nil {
 		return nil, err
 	}
 	signature, err := cryptoSuite.Sign(key, digest, signerOpts)
+	fmt.Println("----------SignObjectWithKey----------")
+	fmt.Println("key:",key)
+	fmt.Println("hashOpt:",hashOpts)
+	fmt.Println("msg:",object)
+	fmt.Println("digest:",digest)
+	fmt.Println("signature:",signature)
 	if err != nil {
 		return nil, err
 	}

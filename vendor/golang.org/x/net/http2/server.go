@@ -28,14 +28,14 @@ package http2
 import (
 	"bufio"
 	"bytes"
-	"crypto/tls"
+	//"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"math"
 	"net"
-	"net/http"
+	//"net/http"
 	"net/textproto"
 	"net/url"
 	"os"
@@ -47,6 +47,8 @@ import (
 	"time"
 
 	"golang.org/x/net/http2/hpack"
+	http "github.com/tjfoc/gmhttp"
+	tls "github.com/tjfoc/gmtls"
 )
 
 const (

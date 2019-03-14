@@ -27,15 +27,23 @@ var origGoPath = os.Getenv("GOPATH")
 
 func TestChaincodeInstal(t *testing.T) {
 
+	//testSetup := &BaseSetupImpl{
+	//	ConfigFile:      "../fixtures/config/config_test.yaml",
+	//	ChannelID:       "mychannel",
+	//	OrgID:           "peerorg1",
+	//	ChannelConfig:   "../fixtures/channel/mychannel.tx",
+	//	ConnectEventHub: true,
+	//}
+
 	testSetup := &BaseSetupImpl{
 		ConfigFile:      "../fixtures/config/config_test.yaml",
 		ChannelID:       "mychannel",
-		OrgID:           "peerorg1",
-		ChannelConfig:   "../fixtures/channel/mychannel.tx",
+		OrgID:           org1Name,
+		ChannelConfig:   "../fixtures/channel-artifacts-nokafka/channel.tx",
 		ConnectEventHub: true,
 	}
 
-	if err := testSetup.Initialize(); err != nil {
+	if err := testSetup.Initialize_noCA1(); err != nil {
 		t.Fatalf(err.Error())
 	}
 

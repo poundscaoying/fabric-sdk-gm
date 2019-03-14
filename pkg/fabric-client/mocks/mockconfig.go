@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package mocks
 
 import (
-	"crypto/x509"
+	//"crypto/x509"
 	"time"
 
 	config "github.com/hyperledger/fabric-sdk-go/api/apiconfig"
@@ -16,6 +16,7 @@ import (
 
 	bccspFactory "github.com/hyperledger/fabric/bccsp/factory"
 	"github.com/spf13/viper"
+	x509 "github.com/tjfoc/gmsm/sm2"
 )
 
 // MockConfig ...

@@ -18,11 +18,11 @@ package http2 // import "golang.org/x/net/http2"
 
 import (
 	"bufio"
-	"crypto/tls"
+	//"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
+	//"net/http"
 	"os"
 	"sort"
 	"strconv"
@@ -30,6 +30,9 @@ import (
 	"sync"
 
 	"golang.org/x/net/lex/httplex"
+	tls "github.com/tjfoc/gmtls"
+	http "github.com/tjfoc/gmhttp"
+
 )
 
 var (

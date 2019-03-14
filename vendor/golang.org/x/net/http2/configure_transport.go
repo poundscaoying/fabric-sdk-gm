@@ -7,9 +7,11 @@
 package http2
 
 import (
-	"crypto/tls"
+	//"crypto/tls"
 	"fmt"
-	"net/http"
+	//"net/http"
+	http "github.com/tjfoc/gmhttp"
+	tls "github.com/tjfoc/gmtls"
 )
 
 func configureTransport(t1 *http.Transport) (*Transport, error) {
